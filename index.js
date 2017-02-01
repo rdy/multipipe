@@ -73,7 +73,14 @@ function pipe(streams, opts, cb){
   streams.forEach(function(stream, i){
     var next = streams[i+1];
     if (next) stream.pipe(next);
-    if (stream != ret) stream.on('error', ret.emit.bind(ret, 'error'));
+    if (stream != ret) {
+      var onError = ret.emit.bind(ret, 'error');
+      stream.on('error', onError);
+      function cleanup() {
+        stream.removeListener('error', onError);
+      }
+      stream.on('finish', cleanup).on('end', cleanup);
+    }
   });
 
   if (cb) {
@@ -81,9 +88,11 @@ function pipe(streams, opts, cb){
     ret.on('error', end);
     last.on('finish', function(){ end() });
     last.on('close', function(){ end() });
+
     function end(err){
       if (ended) return;
       ended = true;
+      ret.removeListener('error', end);
       cb(err);
     }
   }

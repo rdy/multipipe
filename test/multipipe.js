@@ -47,7 +47,21 @@ describe('pipe(a, b, c)', function(){
     .pipe(stream)
     .pipe(Writable(done));
   });
- 
+
+  it('removes the error callback when a stream closes', function(done) {
+    var a = Readable();
+    var b = Transform();
+    var c = Writable(function() {
+      setTimeout(function() {
+        assert.equal(a.listenerCount('error'), 0);
+        assert.equal(b.listenerCount('error'), 0);
+        assert.equal(c.listenerCount('error'), 0);
+        done();
+      }, 0);
+    });
+    pipe(a, b, c);
+  });
+
   describe('errors', function(){
     it('should reemit', function(done){
       var a = Transform();
@@ -170,6 +184,19 @@ describe('pipe(a, b, c, fn)', function(){
     var c = Writable();
     pipe(a, b, c, done);
     c.emit('finish', true);
+  });
+
+  it('removes error callbacks on close', function(done) {
+    var a = Readable();
+    var b = Transform();
+    var c = Writable();
+    var stream = pipe(a, b, c, function() {
+      assert.equal(a.listenerCount('error'), 0);
+      assert.equal(b.listenerCount('error'), 0);
+      assert.equal(c.listenerCount('error'), 0);
+      assert.equal(stream.listenerCount('error'), 0);
+      done();
+    });
   });
 });
 
